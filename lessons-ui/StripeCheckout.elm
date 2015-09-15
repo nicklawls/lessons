@@ -1,7 +1,7 @@
 module StripeCheckout where
 
 import Html exposing (Html, node, form)
-import Html.Attributes exposing (attribute, action, method)
+import Html.Attributes exposing (attribute, action, method, enctype)
 
 checkout : Html
 checkout =
@@ -20,8 +20,9 @@ checkout =
 checkoutForm : Html
 checkoutForm =
     form
-        [ action "/charge"
+        [ action "http://localhost:8081/charges"
         , method "POST"
+        , enctype "application/x-www-form-urlencoded"
         ]
         [checkout]
 
