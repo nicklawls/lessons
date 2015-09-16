@@ -20,8 +20,8 @@ library
                      , aeson >= 0.8
                      , either
                      , mtl
-                     , time
                      , text
+                     , bytestring
                      , wai
                      , warp
                      , unordered-containers >= 0.2.5.1
