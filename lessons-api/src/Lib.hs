@@ -31,7 +31,7 @@ data StripeMode
     | Test
 
 
-type ChargeAPI = "charges" :> ReqBody '[FormUrlEncoded] TokenInfo :> Post '[JSON] TokenInfo
+type ChargeAPI = "charge" :> ReqBody '[FormUrlEncoded] TokenInfo :> Post '[JSON] TokenInfo
 
 
 data TokenInfo = TokenInfo
@@ -88,29 +88,28 @@ instance FromFormUrlEncoded TokenInfo where
 
 
 
-
-
-
 instance ToJSON TokenInfo
 
 
-translateError :: Either StripeError Customer -> Either ServantErr Customer
-translateError = undefined
--- would be better with a custom --createCustomer function that
--- takes an email and a TokenId
-
--- createCustomer :: EitherT StripeError IO
-
 
 server :: Server ChargeAPI
-server = charges
-    where
-        charges :: TokenInfo -> EitherT ServantErr IO TokenInfo
-        charges tokenInfo = do
-            keyString <- liftIO $ getKey Test
-            let config = StripeConfig (pack keyString)
-            let tokenId = TokenId (stripeToken tokenInfo)
-            return tokenInfo
+server = charge
+
+-- createCustomer :: StripeConfig -> TokenId
+
+
+charge :: TokenInfo -> EitherT ServantErr IO TokenInfo
+charge tokenInfo = do
+       keyString <- liftIO $ getKey Test
+       let config = StripeConfig (pack keyString)
+       let tokenID = TokenId (stripeToken tokenInfo)
+       customerResult <- (liftIO $ stripe config (createCustomerByToken tokenID) ) :: EitherT ServantErr IO (Either StripeError Customer)
+       case customerResult of
+           Left stripeErr -> left err500 -- TODO Customize Error
+           Right customer -> right customer
+       -- TODO Create and submit charge
+       -- TODO Refactor customer creation and charge creation, write unit tests, handle non-new customer case
+       return tokenInfo
 
 
 chargeAPI :: Proxy ChargeAPI
