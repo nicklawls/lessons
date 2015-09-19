@@ -6,4 +6,6 @@ import Network.Wai.Handler.Warp
 
 
 main :: IO ()
-main = run 8081 app
+main = do
+    print "Lessons running on port 8081 " 
+    run 8081 app

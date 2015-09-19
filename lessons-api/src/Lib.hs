@@ -20,6 +20,7 @@ import GHC.Generics
 import Web.Stripe
 import Web.Stripe.Token
 import Web.Stripe.Customer
+import Web.Stripe.Charge
 import Network.Wai
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as M
@@ -30,8 +31,14 @@ data StripeMode
     = Live
     | Test
 
+newtype ChargeSuccess = ChargeSuccess
+    { chargeID :: T.Text
+    } deriving (Generic)
 
-type ChargeAPI = "charge" :> ReqBody '[FormUrlEncoded] TokenInfo :> Post '[JSON] TokenInfo
+instance ToJSON ChargeSuccess
+
+-- TODO: Add a url capture that gets the amount
+type ChargeAPI = "charge" :> ReqBody '[FormUrlEncoded] TokenInfo :> Post '[JSON] ChargeSuccess
 
 
 data TokenInfo = TokenInfo
@@ -87,29 +94,38 @@ instance FromFormUrlEncoded TokenInfo where
             Left "Didn't contain stripeToken and stripeEmail"
 
 
-
-instance ToJSON TokenInfo
-
-
-
 server :: Server ChargeAPI
 server = charge
 
--- createCustomer :: StripeConfig -> TokenId
+-- TODO hook up a db to store customer data, test for existence, create if needed, unit test
+createCustomer :: StripeConfig -> TokenId -> EitherT ServantErr IO Customer
+createCustomer config tokenID = do
+    customerResult <- liftIO $ stripe config (createCustomerByToken tokenID)
+    case customerResult of
+        Left stripeErr -> left err500 -- TODO Customize Error
+        Right customer -> right customer
 
 
-charge :: TokenInfo -> EitherT ServantErr IO TokenInfo
+-- TODO Unit Tests
+executeCharge :: StripeConfig -> TokenId -> Amount -> EitherT ServantErr IO Charge
+executeCharge config tokenID amount = do
+    chargeResult <- liftIO $ stripe config (chargeCardByToken tokenID USD amount Nothing)
+    case chargeResult of
+        Left stripeErr -> left err500 -- TODO Customize Error
+        Right customer -> right customer
+
+charge :: TokenInfo -> EitherT ServantErr IO ChargeSuccess
 charge tokenInfo = do
        keyString <- liftIO $ getKey Test
        let config = StripeConfig (pack keyString)
        let tokenID = TokenId (stripeToken tokenInfo)
-       customerResult <- (liftIO $ stripe config (createCustomerByToken tokenID) ) :: EitherT ServantErr IO (Either StripeError Customer)
-       case customerResult of
-           Left stripeErr -> left err500 -- TODO Customize Error
-           Right customer -> right customer
-       -- TODO Create and submit charge
-       -- TODO Refactor customer creation and charge creation, write unit tests, handle non-new customer case
-       return tokenInfo
+       charge <- executeCharge config tokenID 1900
+       right $ ChargeSuccess (extractId . chargeId $ charge)
+
+
+extractId :: ChargeId -> T.Text
+extractId (ChargeId text) = text
+extractId _ = "Expansion Object"
 
 
 chargeAPI :: Proxy ChargeAPI

@@ -20,7 +20,7 @@ checkout =
 checkoutForm : Html
 checkoutForm =
     form
-        [ action "http://localhost:8081/charges"
+        [ action "http://localhost:8081/charge"
         , method "POST"
         , enctype "application/x-www-form-urlencoded"
         ]
