@@ -1,22 +1,32 @@
 module StripeCheckout (Model, init, Action, update, view) where
 {-| A Stripe Checkout Button that plugs directly into the Elm Architecture
 
-# Model
-@docs Model, init
+This was a good experiment
 
-# Update
-@docs Action, update
+I've concluded that in the simple integration case, stripe's
+complete control of the button is too prohibitive: Elm needs
+a sense of the button's state at all times in order to intecept
+the form submit.
 
-# View
-@docs view
+Here's my new idea:
+
+Build the model, view, and update around the custom integration.
+
+Create actions for each part of the configure, open, close cycle
+
+Have those actions control a conversation with checkout.js over ports
+
+Have js send the token back to elm, who can then initiate an http post to the server
+
+create any custom elm attributes to simplify the interactions.
 
 |-}
 
 
 import Html exposing (Html, node, form, Attribute)
-import Html.Events exposing (onSubmit)
+import Html.Events exposing (onSubmit, onWithOptions, Options)
 import Html.Attributes exposing ( attribute, action, method, enctype,src,class)
-
+import Json.Decode exposing (value)
 -- TODO what if the parent component recieves the token, then decides what to do with it?
 
 
@@ -34,6 +44,7 @@ type alias Model =
     , description : String
     , stripePublishableKey : String
     , chargeUrl : String
+    , status : String
     }
 
 {-| Foobar
@@ -46,9 +57,12 @@ init =
     , description = "Burger"
     , stripePublishableKey = "pk_test_Y31x7Mqyi1iY63IQb95IAORm"
     , chargeUrl = "http://localhost:8081/charge"
+    , status = "not done"
     }
 
 -- should represent the address in the parent after submit has completed
+-- TODO: Options for redirect
+--      - include a user-configurable redirect url and handle it in the server
 
 {-| Foobar
 
@@ -60,6 +74,7 @@ type alias Context =
 -- TODO: Add more possible actions
 type Action
     = NoOp
+    | Completed String
 
 {-| Foobar
 
@@ -67,7 +82,10 @@ type Action
 update : Action -> Model -> Model
 update action model =
     case action of
-        NoOp -> model
+        NoOp ->
+            model
+        Completed str ->
+            {model | status <- str}
 
 
 {-| Foobar
@@ -75,28 +93,37 @@ update action model =
 |-}
 view : Signal.Address Action -> Model -> Html
 view address model =
-    form
-        [ action model.chargeUrl
-        , method "POST"
-        , enctype "application/x-www-form-urlencoded"
-        , onSubmit address NoOp
-        ]
-
-        [ script
-            [ src "https://checkout.stripe.com/checkout.js"
-            , class "stripe-button"
-            , dataKey model.stripePublishableKey
-            , dataName model.name
-            , dataDescription model.description
-            , dataAmount model.amount
-            , dataLocale "auto"
-             --, dataImage .img/documentation/checkout/marketplace.png
+    let options =
+        { stopPropagation = True
+        , preventDefault = True
+        }
+    in
+    Html.div [] [Html.text model.status,
+        form
+            [ action model.chargeUrl
+            , method "POST"
+            , enctype "application/x-www-form-urlencoded"
+            , onWithOptions "submit" options value
+                (\_ -> Signal.message address (Completed "donezo"))
+            , onSubmit address (NoOp)
+            , attribute "onsubmit" "foo"
             ]
-            [
-             -- TODO add input fields acoording to model
+
+            [ script
+                [ src "https://checkout.stripe.com/checkout.js"
+                , class "stripe-button"
+                , dataKey model.stripePublishableKey
+                , dataName model.name
+                , dataDescription model.description
+                , dataAmount model.amount
+                , dataLocale "auto"
+                 --, dataImage .img/documentation/checkout/marketplace.png
+                ]
+                [
+                 -- TODO add input fields acoording server requirements
+                ]
             ]
         ]
-
 dataKey : String -> Attribute
 dataKey =
     attribute "data-key"
