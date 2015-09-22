@@ -3,8 +3,40 @@
     <head>
         <meta charset="utf-8">
         <title>Bass Drum Lessons</title>
+        <script src="https://checkout.stripe.com/checkout.js"></script>
+        <script src="elm.js"></script>
     </head>
+
     <body>
-        get some lessons bruh
     </body>
+    <script type="text/javascript">
+        var app = Elm.fullscreen(Elm.StripeCheckout, {incomingToken:["",0]}); // have to provide initial values for incoming (from elm's perspective) signals
+
+        app.ports.configureStripe.subscribe(configureStripeHandler);
+        app.ports.openStripe.subscribe(openStripeHandler);
+
+
+        var formState = {};
+        var handler = null;
+
+
+        function configureStripeHandler (recievedKey) {
+            handler = StripeCheckout.configure({
+                key: recievedKey,
+                token: function (token) {
+                    console.log(token);
+                    app.ports.incomingToken.send([token.id,formState.amount]);
+                }
+            });
+        }
+
+
+        function openStripeHandler(recievedInfo) {
+            formState = recievedInfo;
+            console.log(formState);
+            handler.open(formState);
+        }
+
+    </script>
+
 </html>

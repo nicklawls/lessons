@@ -1,155 +1,196 @@
-module StripeCheckout (Model, init, Action, update, view) where
-{-| A Stripe Checkout Button that plugs directly into the Elm Architecture
+module StripeCheckout where
 
-This was a good experiment
-
-I've concluded that in the simple integration case, stripe's
-complete control of the button is too prohibitive: Elm needs
-a sense of the button's state at all times in order to intecept
-the form submit.
-
-Here's my new idea:
-
-Build the model, view, and update around the custom integration.
-
-Create actions for each part of the configure, open, close cycle
-
-Have those actions control a conversation with checkout.js over ports
-
-Have js send the token back to elm, who can then initiate an http post to the server
-
-create any custom elm attributes to simplify the interactions.
-
-|-}
-
-
-import Html exposing (Html, node, form, Attribute)
-import Html.Events exposing (onSubmit, onWithOptions, Options)
-import Html.Attributes exposing ( attribute, action, method, enctype,src,class)
+import StartApp
+import Html exposing (Html, text, div, button)
+import Html.Events exposing (onClick, onWithOptions, Options)
+import Html.Attributes
 import Json.Decode exposing (value)
--- TODO what if the parent component recieves the token, then decides what to do with it?
+import Effects exposing (Effects)
+import Task exposing (Task, andThen, succeed)
+import Debug
 
-
--- update : Context -> Action -> Model -> Model
--- view : Context -> Model -> Html
-
--- a full model describing the state of the checkout form
-
-{-| Foobar
-
-|-}
 type alias Model =
-    { amount : Int
-    , name : String
-    , description : String
-    , stripePublishableKey : String
-    , chargeUrl : String
-    , status : String
+    { key : PublishableKey
+    , info : FormInfo
     }
 
-{-| Foobar
+type alias PublishableKey = String
 
-|-}
-init : Model
-init =
-    { amount = 0
-    , name = "Bob's Burgers"
-    , description = "Burger"
-    , stripePublishableKey = "pk_test_Y31x7Mqyi1iY63IQb95IAORm"
-    , chargeUrl = "http://localhost:8081/charge"
-    , status = "not done"
+type alias FormInfo =
+    { amount : Maybe Int
+    , name : Maybe String
+    , description : Maybe String
+    , imageUrl : Maybe String
+    , locale : Maybe String
+    , currency : Maybe String -- Could define a currency ADT
+    , panelLabel : Maybe String
+    , zipCode : Bool
+    , billingAddress : Bool
+    , shippingAddress : Bool
+    , email : Maybe String
+    , allowRememberMe : Bool
+    , bitcoin : Bool
+    , alipay : Maybe Bool -- has actual states 'auto', true, and false
+    , alipayReusable :  Bool
     }
 
--- should represent the address in the parent after submit has completed
--- TODO: Options for redirect
---      - include a user-configurable redirect url and handle it in the server
+type alias Token = String
 
-{-| Foobar
+init : PublishableKey -> (Model, Effects Action)
+init pk =
+    (
+      { key = pk
+      , info = emptyInfo
+      }
+    , Effects.task (succeed Configure)
+    )
 
-|-}
-type alias Context =
-    { afterSubmit : Signal.Address Action
+emptyInfo : FormInfo
+emptyInfo =
+    { amount = Nothing
+    , name = Nothing
+    , description = Nothing
+    , imageUrl = Nothing
+    , locale = Nothing
+    , currency = Nothing
+    , panelLabel = Nothing
+    , zipCode = False
+    , billingAddress = False
+    , shippingAddress = False
+    , email = Nothing
+    , allowRememberMe = False
+    , bitcoin = False
+    , alipay = Nothing
+    , alipayReusable = False
     }
 
--- TODO: Add more possible actions
+
+
+noFx : model -> (model, Effects a)
+noFx model =
+    (model, Effects.none)
+
+
 type Action
     = NoOp
-    | Completed String
+    | Configure -- sent in initialization, sends pubkey to js
+    | Open -- sent by user to open the modal, sends other params to js, which then calls open, also sets token callback
+    | TokenRecieved (Maybe (Token,Int)) -- sent by js token callback
+    -- | SubmitToServer Token -- sent by user, can send user defined Json Body
+    -- | RecieveFromServer Json.Decode.Value Json.Decode.Decoder a
+    -- | Close -- sent by Recieve to close the modal via port to js
+    | Amount Int -- set the amount
+    | Description String
 
-{-| Foobar
+finish : a -> Task x Action
+finish = always <| succeed NoOp
 
-|-}
-update : Action -> Model -> Model
-update action model =
-    case action of
+update : Action -> Model -> (Model, Effects Action)
+update address model =
+    case address of
         NoOp ->
-            model
-        Completed str ->
-            {model | status <- str}
+            noFx model
+        Configure ->
+            ( model
+            , Effects.task
+                ( Signal.send configMailbox.address model.key
+                    `andThen` finish
+                )
+            )
+        Open ->
+            ( model
+            , Effects.task
+                ( Signal.send openMailbox.address model.info
+                    `andThen` finish
+                )
+            )
+        TokenRecieved maybeToken ->
+            case maybeToken of
+                Just (token,amount) ->
+                    let log = Debug.log "Here ya go: " (token,amount)
+                    in
+                        noFx model
+                Nothing ->
+                    noFx model
+        Amount newAmt ->
+            let info = model.info
+            in
+                noFx { model |
+                        info <- { info | amount <- Just newAmt}
+                     }
+        Description newDes ->
+            let info = model.info
+            in
+                noFx { model |
+                        info <- { info | description <- Just newDes}
+                     }
 
 
-{-| Foobar
+
+
+{-|
+    1. When page is loaded, load stripejs
+    2. As soon as possible, set the pkey and send a configure js (might have to Configure on load if errors)
+    3. onClick of the button, send an Open, which somehow talks to a port to open with the passed in options in js
+       this also sets the "token" callback to send the token over the another port
+    4. When the
 
 |-}
+
+configMailbox : Signal.Mailbox PublishableKey
+configMailbox =
+    Signal.mailbox ""
+
+
+openMailbox : Signal.Mailbox FormInfo
+openMailbox =
+    Signal.mailbox emptyInfo
+
+
+
 view : Signal.Address Action -> Model -> Html
 view address model =
-    let options =
-        { stopPropagation = True
-        , preventDefault = True
-        }
-    in
-    Html.div [] [Html.text model.status,
-        form
-            [ action model.chargeUrl
-            , method "POST"
-            , enctype "application/x-www-form-urlencoded"
-            , onWithOptions "submit" options value
-                (\_ -> Signal.message address (Completed "donezo"))
-            , onSubmit address (NoOp)
-            , attribute "onsubmit" "foo"
-            ]
-
-            [ script
-                [ src "https://checkout.stripe.com/checkout.js"
-                , class "stripe-button"
-                , dataKey model.stripePublishableKey
-                , dataName model.name
-                , dataDescription model.description
-                , dataAmount model.amount
-                , dataLocale "auto"
-                 --, dataImage .img/documentation/checkout/marketplace.png
-                ]
-                [
-                 -- TODO add input fields acoording server requirements
-                ]
-            ]
+    div []
+        [ button [onClick address (Amount 5)] [text "Set 5"]
+        , button [onClick address (Amount 10)] [text "Set 10"]
+        , button [onClick address (Amount 0)] [text "Set 0"]
+        , button [onClick address Configure] [text "Configure"]
+        , button [onClick address Open] [text "Pay with Stripe"] -- may have to prevent default
+        , text ( "Current Amount: " ++
+                    (  model.info.amount
+                    |> Maybe.withDefault 0
+                    |> toString
+                    )
+               )
         ]
-dataKey : String -> Attribute
-dataKey =
-    attribute "data-key"
+
+app =
+    StartApp.start
+        { init = init "pk_test_Y31x7Mqyi1iY63IQb95IAORm"
+        , update = update
+        , view = view
+        , inputs = [incomingToken']
+        }
 
 
-dataName : String -> Attribute
-dataName =
-    attribute "data-name"
+port configureStripe : Signal PublishableKey
+port configureStripe = Signal.dropRepeats configMailbox.signal
 
 
-dataDescription : String -> Attribute
-dataDescription =
-    attribute "data-description"
+port openStripe : Signal FormInfo
+port openStripe = openMailbox.signal
+
+incomingToken' : Signal Action
+incomingToken' = Signal.map (\pair -> TokenRecieved (Just pair) ) incomingToken
 
 
-dataAmount : Int -> Attribute
-dataAmount =
-    toString >>
-        attribute "data-amount"
+port incomingToken : Signal (Token,Int)
 
 
-dataLocale : String -> Attribute
-dataLocale =
-    attribute "data-locale"
+port tasks : Signal (Task.Task Effects.Never ())
+port tasks = app.tasks
 
 
-script : List Attribute -> List Html -> Html
-script =
-    node "script"
+main : Signal Html
+main = --Signal.constant (div [] [text "Yolo"])
+    app.html
