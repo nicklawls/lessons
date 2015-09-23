@@ -25,5 +25,4 @@ function openStripeHandler(recievedInfo) {
 
 function closeStripeHandler() {
     handler.close()
-    console.log("I closed nigga");
 }
