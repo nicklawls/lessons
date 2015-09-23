@@ -28,6 +28,8 @@ library
                      , servant == 0.4.*
                      , servant-server == 0.4.*
                      , stripe-haskell == 0.1.4.1
+                     , wai-cors
+                     , wai-extra
   default-language:    Haskell2010
 
 executable lessons
