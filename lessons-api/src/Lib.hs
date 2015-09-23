@@ -21,8 +21,7 @@ import Web.Stripe
 import Web.Stripe.Token
 import Web.Stripe.Charge
 import Network.Wai
-import Network.Wai.Middleware.Cors
-import Network.Wai.Middleware.RequestLogger
+
 import qualified Data.Text as T
 import Data.ByteString.Char8 (pack)
 
@@ -36,15 +35,15 @@ newtype ChargeSuccess = ChargeSuccess
 
 
 instance ToJSON ChargeSuccess
-instance FromJSON ChargeRequestBody
-
--- TODO: Implement CORS
-type ChargeAPI = "charge" :> ReqBody '[JSON] ChargeRequestBody :> Post '[JSON] ChargeSuccess
+instance FromJSON ChargeRequest
 
 
+type ChargeAPI = "charge" :> ReqBody '[JSON] ChargeRequest :> Post '[JSON] ChargeSuccess
 
-data ChargeRequestBody
- = ChargeRequestBody
+
+
+data ChargeRequest
+ = ChargeRequest
  { stripeToken :: T.Text
  , amount :: Amount -- Ammount is exported by Web.Stripe.Charge
  } deriving (Show, Generic)
@@ -64,7 +63,7 @@ executeCharge config tokenID amnt = do
         Right customer -> right customer
 
 
-charge :: ChargeRequestBody -> EitherT ServantErr IO ChargeSuccess
+charge :: ChargeRequest -> EitherT ServantErr IO ChargeSuccess
 charge request = do
        keyString <- liftIO $ getKey Test
        let config = StripeConfig (pack keyString)
@@ -88,22 +87,4 @@ chargeAPI = Proxy
 
 
 app :: Application
-app = logStdoutDev (checkoutCors (serve chargeAPI server))
-
-
-checkoutCors :: Middleware
-checkoutCors = cors (const $ Just checkoutCorsPolicy)
-
-
-checkoutCorsPolicy :: CorsResourcePolicy
-checkoutCorsPolicy =
-    CorsResourcePolicy
-        { corsOrigins = Nothing
-        , corsMethods = simpleMethods
-        , corsRequestHeaders = simpleHeaders ++ ["Content-Type"]
-        , corsExposedHeaders = Nothing
-        , corsMaxAge = Nothing
-        , corsVaryOrigin = False
-        , corsRequireOrigin = False
-        , corsIgnoreFailures = False
-        }
+app = serve chargeAPI server

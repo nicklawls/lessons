@@ -225,7 +225,6 @@ view address model =
             , button [onClick address Open] [text "Checkout"] -- may have to prevent default
             , text ( "Current Amount: " ++ toString model.info.amount )
             , confirmationBox model.confirmation
-            , button [onClick address Close ] [text "Close"]
             ]
 
 
