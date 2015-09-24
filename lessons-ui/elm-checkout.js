@@ -23,6 +23,7 @@ function openStripeHandler(recievedInfo) {
     handler.open(formState);
 }
 
+
 function closeStripeHandler() {
     handler.close()
 }

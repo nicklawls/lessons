@@ -1,20 +1,36 @@
 module StripeCheckout where
 
 import StartApp
-import Html exposing (Html, text, div, button)
-import Html.Events exposing (onClick, onWithOptions, Options)
-import Html.Attributes
+import Html exposing (Html, text, div, button, header, footer)
+import Html.Events exposing (onClick)
+import Html.Attributes exposing (id, style)
 import Json.Decode exposing (Decoder, string, object1, (:=))
 import Json.Encode as E
 import Effects exposing (Effects)
 import Task exposing (Task, andThen, succeed)
 import Debug
 import Http exposing (Body, Error, defaultSettings, fromJson)
+import Window
+import Signal exposing ((<~))
+
+import Css exposing (Styles, setViewport)
+import Css.Flex as Flex
+import Css.Display as Display exposing (display)
+import Css.Shadow as Shadow
+import Css.Background as Background
+import Css.Text as Text
+import Css.Font as Font
+import Css.Padding as Padding
+import Css.Dimension as Dimension
+import Css.Margin as Margin
+import Color exposing (Color, rgba, complement)
+
 
 type alias Model =
     { key : PublishableKey
     , info : FormInfo
     , confirmation : Maybe (Result String ChargeSuccess)
+    , window : (Int,Int)
     }
 
 
@@ -47,6 +63,7 @@ init pk =
       { key = pk
       , info = emptyInfo
       , confirmation = Nothing
+      , window = (1000,1000)
       }
     , Effects.task (succeed Configure)
     )
@@ -79,6 +96,7 @@ noFx model =
 
 type Action
     = NoOp
+    | Win (Int,Int)
     | Configure -- sent in initialization, sends pubkey to js
     | Open -- sent by user to open the modal, sends other params to js, which then calls open, also sets token callback
     | TokenRecieved (Maybe (Token,Int)) -- sent by js token callback
@@ -97,6 +115,9 @@ update address model =
     case address of
         NoOp ->
             noFx model
+
+        Win dims ->
+            noFx { model | window <- dims}
 
         Configure ->
             ( model
@@ -216,8 +237,95 @@ closeMailbox : Signal.Mailbox ()
 closeMailbox =
     Signal.mailbox ()
 
+-- in order to make an (Int,Int) argument to view, I'd have to stop using start app and map it in manually
+-- Window.dimensions : Signal (Int,Int)
+-- (<~) : (a -> b) -> Signal a -> Signal b
+-- myView : (Int,Int) -> Signal.Address Action -> Model -> Html
+-- appView : Signal.Address Action -> Model -> Html
+
 view : Signal.Address Action -> Model -> Html
 view address model =
+    let
+        (width, height) = model.window
+    in
+        div
+        [ style
+            <| column
+            <| Text.color (rgba 255 255 255 1 ) []
+        ]
+        [ setViewport
+        , div [ style <| end [] ] [ text "header" ]
+        , div
+          [ style <| responsiveRow width []] -- turns the rows into columns based on screen dims
+          [ div [ style <| side [] ] [text "left"]
+          , div
+            [ style <| content [] ]
+            [ selector address model ]
+          , div [style <| side [] ] [text "right"]
+          ]
+        , div [style <| end [] ] [text "footer"]
+        ]
+
+medium : Int
+medium =
+  900
+
+
+flex : Styles -> Styles
+flex styles =
+  display Display.Flex styles
+
+
+responsiveRow : Int -> Styles -> Styles
+responsiveRow width styles =
+  if | width < medium -> column <| flex styles
+     | otherwise -> flex styles
+
+
+end : Styles -> Styles
+end styles =
+  styles
+    |> Dimension.height 50
+    |> Background.color (rgba 26 188 156 1)
+    |> centered
+
+
+side : Styles -> Styles
+side styles =
+  styles
+    -- |> Dimension.height 50
+    |> Background.color (rgba 52 152 219 1)
+    |> centered
+    |> Flex.grow 1
+
+
+content : Styles -> Styles
+content styles =
+  styles
+    -- |> Dimension.width 200
+    |> Dimension.height 200
+    |> Background.color (rgba 52 73 94 1)
+    |> centered
+    |> Flex.grow 2
+
+
+column : Styles -> Styles
+column styles =
+  styles
+    |> flex
+    |> Flex.direction Flex.Column
+
+
+centered : Styles -> Styles
+centered styles =
+  styles
+    |> flex
+    |> Flex.alignItems Flex.AICenter
+    |> Flex.justifyContent Flex.JCCenter
+
+
+selector : Signal.Address Action -> Model -> Html
+selector address model =
         div []
             [ button [onClick address (Choose 2500 "1 hour")] [text "1 hour"]
             , button [onClick address (Choose 4500 "2 hours")] [text "2 hours"]
@@ -226,6 +334,7 @@ view address model =
             , text ( "Current Amount: " ++ toString model.info.amount )
             , confirmationBox model.confirmation
             ]
+
 
 
 confirmationBox : Maybe (Result String ChargeSuccess) -> Html
@@ -248,7 +357,7 @@ app =
         { init = init "pk_test_Y31x7Mqyi1iY63IQb95IAORm"
         , update = update
         , view = view
-        , inputs = [incomingToken']
+        , inputs = [incomingToken', Win <~ Window.dimensions ]
         }
 
 
