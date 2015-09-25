@@ -29,8 +29,7 @@ import Color exposing (Color, rgba, complement)
 type alias Model =
     { key : PublishableKey
     , info : FormInfo
-    , confirmation : Maybe (Result String ChargeSuccess)
-    , window : (Int,Int)
+    , confirmation : Maybe (Result String ChargeSuccess) -- TODO: add another signal that intermitently switches this back to nothing
     }
 
 
@@ -59,11 +58,9 @@ type alias Token = String
 
 init : PublishableKey -> (Model, Effects Action)
 init pk =
-    (
-      { key = pk
+    ( { key = pk
       , info = emptyInfo
       , confirmation = Nothing
-      , window = (1000,1000)
       }
     , Effects.task (succeed Configure)
     )
@@ -96,7 +93,6 @@ noFx model =
 
 type Action
     = NoOp
-    | Win (Int,Int)
     | Configure -- sent in initialization, sends pubkey to js
     | Open -- sent by user to open the modal, sends other params to js, which then calls open, also sets token callback
     | TokenRecieved (Maybe (Token,Int)) -- sent by js token callback
@@ -109,15 +105,13 @@ type Action
 finish : a -> Task x Action
 finish = always <| succeed NoOp
 
+
 -- TODO: Work in the optional opened and closed callbacks to get a full picture of the modal's state
 update : Action -> Model -> (Model, Effects Action)
 update address model =
     case address of
         NoOp ->
             noFx model
-
-        Win dims ->
-            noFx { model | window <- dims}
 
         Configure ->
             ( model
@@ -161,8 +155,7 @@ update address model =
         Close -> -- no need to actually call, modal closes after submit, iframe js already listening for esc
             ( model
             , Effects.task
-                (
-                  Signal.send closeMailbox.address ()
+                ( Signal.send closeMailbox.address ()
                     `andThen` finish
                 )
             )
@@ -191,8 +184,6 @@ postCharge pair =
         |> Effects.task
 
 
-
-
 jsonPost : Decoder value -> String -> Body -> Task Error value
 jsonPost decoder url body =
     let request =
@@ -205,16 +196,14 @@ jsonPost decoder url body =
         fromJson decoder (Http.send defaultSettings request)
 
 
-
-
 encodeRequest : (Token,Int) -> Body
 encodeRequest (token,amount) =
-    E.object [ ("stripeToken",  E.string token)
-             , ("amount", E.int amount)
-             ]
+    E.object
+        [ ("stripeToken",  E.string token)
+        , ("amount", E.int amount)
+        ]
         |> E.encode 4
         |> Http.string
-
 
 
 decodeResponse : Decoder ChargeSuccess
@@ -238,37 +227,28 @@ closeMailbox =
     Signal.mailbox ()
 
 -- in order to make an (Int,Int) argument to view, I'd have to stop using start app and map it in manually
--- Window.dimensions : Signal (Int,Int)
--- (<~) : (a -> b) -> Signal a -> Signal b
--- myView : (Int,Int) -> Signal.Address Action -> Model -> Html
--- appView : Signal.Address Action -> Model -> Html
+
 
 view : Signal.Address Action -> Model -> Html
 view address model =
-    let
-        (width, height) = model.window
-    in
-        div
-        [ style
-            <| column
-            <| Text.color (rgba 255 255 255 1 ) []
-        ]
-        [ setViewport
-        , div [ style <| end [] ] [ text "header" ]
-        , div
-          [ style <| responsiveRow width []] -- turns the rows into columns based on screen dims
-          [ div [ style <| side [] ] [text "left"]
-          , div
-            [ style <| content [] ]
-            [ selector address model ]
-          , div [style <| side [] ] [text "right"]
-          ]
-        , div [style <| end [] ] [text "footer"]
-        ]
+    div
+    [ style
+        <| column
+        <| Text.color (rgba 255 255 255 1 ) []
+    ]
+    [ setViewport
+    , div [ style <| end [] ] [ text "header" ]
+    , div
+      [ style <| flex [] ]
+      [ div [ style <| side [] ] [text "left"]
+      , div
+        [ style <| content [] ]
+        [ selector address model ]
+      , div [style <| side [] ] [text "right"]
+      ]
+    , div [style <| end [] ] [text "footer"]
+    ]
 
-medium : Int
-medium =
-  900
 
 
 flex : Styles -> Styles
@@ -276,18 +256,13 @@ flex styles =
   display Display.Flex styles
 
 
-responsiveRow : Int -> Styles -> Styles
-responsiveRow width styles =
-  if | width < medium -> column <| flex styles
-     | otherwise -> flex styles
-
-
 end : Styles -> Styles
 end styles =
   styles
-    |> Dimension.height 50
+    -- |> Dimension.height 50
     |> Background.color (rgba 26 188 156 1)
     |> centered
+    |> Flex.grow 1
 
 
 side : Styles -> Styles
@@ -306,7 +281,7 @@ content styles =
     |> Dimension.height 200
     |> Background.color (rgba 52 73 94 1)
     |> centered
-    |> Flex.grow 2
+    |> Flex.grow 3
 
 
 column : Styles -> Styles
@@ -357,7 +332,7 @@ app =
         { init = init "pk_test_Y31x7Mqyi1iY63IQb95IAORm"
         , update = update
         , view = view
-        , inputs = [incomingToken', Win <~ Window.dimensions ]
+        , inputs = [incomingToken']
         }
 
 
