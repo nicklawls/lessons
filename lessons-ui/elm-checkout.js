@@ -1,29 +1,36 @@
-var app = Elm.fullscreen(Elm.StripeCheckout, {incomingToken:["",0]}); // have to provide initial values for incoming (from elm's perspective) signals
+window.addEventListener(
+    'load',
+    function () {
+        var app = Elm.fullscreen(Elm.Main, {incomingToken:""}); // have to provide initial values for incoming (from elm's perspective) signals
 
-app.ports.configureStripe.subscribe(configureStripeHandler);
-app.ports.openStripe.subscribe(openStripeHandler);
-app.ports.closeStripe.subscribe(closeStripeHandler);
+        app.ports.configureStripe.subscribe(configureStripeHandler);
+        app.ports.openStripe.subscribe(openStripeHandler);
+        app.ports.closeStripe.subscribe(closeStripeHandler);
 
-var formState = {};
-var handler = null;
+        var formState = {};
+        var handler = null;
 
 
-function configureStripeHandler (recievedKey) {
-    handler = StripeCheckout.configure({
-        key: recievedKey,
-        token: function (token) {
-            app.ports.incomingToken.send([token.id,formState.amount]);
+        function configureStripeHandler (keyLocaleArr) {
+            handler = StripeCheckout.configure({
+                key: keyLocaleArr[0],
+                locale: keyLocaleArr[1],
+                token: function (token) {
+                    app.ports.incomingToken.send(token.id);
+                }
+            });
         }
-    });
-}
 
 
-function openStripeHandler(recievedInfo) {
-    formState = recievedInfo;
-    handler.open(formState);
-}
+        function openStripeHandler(recievedInfo) {
+            formState = recievedInfo;
+            handler.open(formState);
+        }
 
 
-function closeStripeHandler() {
-    handler.close()
-}
+        function closeStripeHandler() {
+            handler.close()
+        }
+    },
+    false
+);
