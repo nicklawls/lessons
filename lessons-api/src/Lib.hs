@@ -35,7 +35,6 @@ newtype ChargeSuccess = ChargeSuccess
 
 
 instance ToJSON ChargeSuccess
-instance FromJSON ChargeRequest
 
 
 type ChargeAPI = "charge" :> ReqBody '[JSON] ChargeRequest :> Post '[JSON] ChargeSuccess
@@ -46,7 +45,12 @@ data ChargeRequest
  = ChargeRequest
  { stripeToken :: T.Text
  , amount :: Amount -- Amount is exported by Web.Stripe.Charge
+ , name :: T.Text
+ , email :: T.Text
  } deriving (Show, Generic)
+
+
+instance FromJSON ChargeRequest
 
 
 getKey :: StripeMode -> IO String

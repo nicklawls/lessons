@@ -8,6 +8,8 @@ module Style ( topStyle
              , confirmationBoxStyle
              , userInputStyle
              , inputStyle
+             , buttonStyle
+             , decreaseMargin
              ) where
 
 import Html
@@ -45,7 +47,7 @@ contentItem n styles =
 checkoutButtonStyle : Html.Attribute
 checkoutButtonStyle =
     style
-        <| Background.color (rgba 98 64 204 1)
+        -- <| Background.color (rgba 98 64 204 1)
         <| contentItem 1 []
 
 -- TODO: add visibility-hidden on bool arg, or equivalent
@@ -57,16 +59,34 @@ confirmationBoxStyle =
 userInputStyle : Html.Attribute
 userInputStyle =
     style
-        <| Background.color (rgba 98 185 150 1)
+        -- <| Background.color (rgba 98 185 150 1)
         <| contentItem 1 []
 
+buttonStyle : Html.Attribute
+buttonStyle =
+    style
+        <| Dimension.width 60 []
+
+decreaseMargin : Html.Attribute
+decreaseMargin =
+    style
+        <| Margin.bottom 0
+        <| Margin.top 0 []
+
+
 buttonRowStyle : Html.Attribute
-buttonRowStyle = style []
+buttonRowStyle =
+    style
+        <| Flex.alignItems Flex.AICenter
+        <| Flex.justifyContent Flex.JCBetween
+        <| flex
+        <| Dimension.width 200 []
+
 
 selectorStyle : Html.Attribute
 selectorStyle =
     style
-        <| Background.color (rgba 98 185 204 1)
+        -- <| Background.color (rgba 98 185 204 1)
         <| contentItem 1 []
 
 
@@ -78,7 +98,7 @@ containerStyle : Html.Attribute
 containerStyle =
     style
         <| column
-        <| Text.color (rgba 255 255 255 1 )
+        <| Text.color (rgba 215 216 219 1 )
         <| Dimension.height 900 []
 
 
@@ -92,7 +112,7 @@ end : Int -> Styles -> Styles
 end n styles =
   styles
     -- |> Dimension.height 50
-    |> Background.color (rgba 26 188 156 1)
+    |> Background.color (rgba 39 73 107 1)
     |> centered
     |> Flex.grow n
     |> Flex.shrink 0
@@ -101,7 +121,7 @@ end n styles =
 content : Styles -> Styles
 content styles =
   styles
-    |> Background.color (rgba 52 73 94 1)
+    |> Background.color (rgba 39 73 107 1)
     |> centered
     |> Flex.grow 80
     |> column

@@ -254,16 +254,16 @@ view address model =
     in
         div [ containerStyle ]
             [ setViewport
-            , header [ topStyle ] [ h1 [] [text "Bass Drum Lessons Bruh"] ]
+            , header [ topStyle ] [ h1 [] [text "Pay For Lessons With Nick"] ]
             , div [ contentStyle ] content
-            , footer [ bottomStyle ] [text "Copyright Nick Lawler 2015"]
+            , footer [ bottomStyle ] [text "Copyright Nick Lawler 2015" ]
             ]
 
 
 userInput : Signal.Address Action -> UserInfo -> Html
 userInput address (name,email) =
     div [userInputStyle]
-        [ h2 [] [text "First Things First"]
+        [ h2 [] [text "Who are You?"]
         , input
             [ placeholder "Name"
             , value name
@@ -283,8 +283,8 @@ userInput address (name,email) =
 selector : Signal.Address Action -> Html
 selector address =
     div [selectorStyle]
-        [ h2 [] [text "How many Lessons?"]
-        , h4 [] [text "(more = cheaper!)"]
+        [ h2 [decreaseMargin] [text "How many Lessons?"]
+        , h4 [] [text "Each lesson is an hour long, $/hour decreases with more lessons"]
         , buttonRow address
         ]
 
@@ -292,21 +292,21 @@ selector address =
 buttonRow : Signal.Address Action -> Html
 buttonRow address =
         div [ buttonRowStyle ]
-            [ button [onClick address (Choose 2500 "1 hour")] [text "1 hour"]
-            , button [onClick address (Choose 4500 "2 hours")] [text "2 hours"]
-            , button [onClick address (Choose 7000 "3 hours")] [text "3 hours"]
+            [ button [onClick address (Choose 2500 "1 Hour-Long Lesson"), buttonStyle] [text "1"]
+            , button [onClick address (Choose 4500 "2 Hours of Lessons"), buttonStyle] [text "2"]
+            , button [onClick address (Choose 7000 "3 Hours of Lessons"), buttonStyle] [text "3"]
             ]
 
 -- TODO: Replace ad-hoc user check with actual validation
 checkoutButton : Signal.Address Action -> Int -> UserInfo -> Html
 checkoutButton address amount (name,email) =
     div [checkoutButtonStyle]
-        [ h3 [] [text ( formatAmount amount )]
+        [ h2 [] [text ( formatAmount amount )]
         , button
             [ onClick address Open
             , disabled (amount <= 0 || name == "" || email == "")
             ]
-            [text "Checkout"]
+            [text "Pay with Card"]
         ]
 
 
@@ -318,8 +318,8 @@ formatAmount amount =
 confirmationBox : ChargeSuccess -> Html
 confirmationBox chargeSuccess =
     div [confirmationBoxStyle]
-        [ h4 [] [text "You're all set!"]
-        , h4 [] [text ("Save your charge ID: " ++ chargeSuccess.chargeID)]
+        [ h4 [] [text "You're all set! If we haven't set up dates and times yet, I'll be in touch soon"]
+        , h4 [] [text ("Might want to save this ID: " ++ chargeSuccess.chargeID)]
         ]
 
 
@@ -334,7 +334,7 @@ app =
 
 configMailbox : Signal.Mailbox (PublishableKey, Locale)
 configMailbox =
-    Signal.mailbox ("", "")
+    Signal.mailbox ("","")
 
 
 openMailbox : Signal.Mailbox FormInfo
