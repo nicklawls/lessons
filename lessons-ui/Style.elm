@@ -49,7 +49,7 @@ checkoutButtonStyle =
     style
         <| contentItem 1 []
 
-
+-- TODO: add visibility-hidden on bool arg, or equivalent
 confirmationBoxStyle : Html.Attribute
 confirmationBoxStyle =
     style

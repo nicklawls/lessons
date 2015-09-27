@@ -1,7 +1,7 @@
 module Main where
 
 import StartApp
-import Html exposing (Html, text,p, div, button, header, footer)
+import Html exposing (Html, text, p, div, button, header, footer, h1, h2, h3, h4)
 import Html.Events exposing (onClick)
 import Html.Attributes exposing (style, hidden, disabled)
 import Json.Decode exposing (Decoder, string, object1, (:=))
@@ -32,8 +32,14 @@ type alias Model =
     { key : PublishableKey
     , locale : Locale
     , info : FormInfo
-    , confirmation : Maybe (Result String ChargeSuccess) -- TODO: add another signal that intermitently switches this back to nothing
+    , state : FormState -- 3 states
     }
+
+-- custom type to define the possible form state, more understandable than Maybe (Result String ChargeSuccess)
+type FormState
+    = Ready
+    | Failed String
+    | Succeeded ChargeSuccess
 
 
 type alias PublishableKey = String
@@ -93,7 +99,7 @@ init key locale =
     ( { key = key
       , locale = locale
       , info = defaultInfo
-      , confirmation = Nothing
+      , state = Ready
       }
     , Effects.task (succeed Configure)
     )
@@ -141,15 +147,15 @@ update address model =
                         ( model
                         , postCharge (token, model.info.amount)
                         )
-                Nothing -> -- TODO: Stripe error, might want a Result
+                Nothing -> -- TODO: Stripe.js error, might want a Result
                     noFx model
 
         Confirm maybeResult ->
             case maybeResult of
                 Just result ->
-                    noFx { model | confirmation <- Just (Ok result)}
+                    noFx { model | state <- Succeeded result }
                 Nothing ->
-                    noFx { model | confirmation <- Just (Err "HEY YOU FUCKED UP")}
+                    noFx { model | state <- Failed "There's been an error talking to the server, tell Nick ASAP!" } -- TODO: maybe add action and effect to return to ready state after timeout
 
         Close -> -- no need to actually call, modal closes after submit, iframe js already listening for esc
             ( model
@@ -208,34 +214,35 @@ decodeResponse =
 -- in order to make an (Int,Int) argument to view, I'd have to stop using start app and map it in manually
 view : Signal.Address Action -> Model -> Html
 view address model =
-    div
-    [ containerStyle ]
-    [ setViewport
-    , header [ topStyle ] [ text "header" ]
-    , div [ midStyle ]
-      [ div
-        [ contentStyle ]
-        [ selector address model.info.amount
-        , checkoutButton address model.info.amount
-        , confirmationBox model.confirmation
-        ]
-      ]
-    , footer [ bottomStyle ] [text "footer"]
-    ]
+    let content =
+        case model.state of
+            Ready ->  [ selector address
+                      , checkoutButton address model.info.amount
+                      ]
+
+            Failed error -> [ div [] [text error] ] -- TODO: maybe do nothing here
+
+            Succeeded chargeSuccess -> [ confirmationBox chargeSuccess ]
+    in
+        div [ containerStyle ]
+            [ setViewport
+            , header [ topStyle ] [ h1 [] [text "Bass Drum Lessons Bruh"] ]
+            , div [ midStyle ]
+                  [ div [ contentStyle ]
+                        content
+                  ]
+            , footer [ bottomStyle ] [text "Copyright Nick Lawler 2015"]
+            ]
 
 
-selector : Signal.Address Action -> Int -> Html
-selector address amount =
+
+selector : Signal.Address Action -> Html
+selector address =
     div [selectorStyle]
-        [ div [] [text "How many lessons would you like to buy?"]
+        [ h2 [] [text "How many Lessons?"]
+        , h4 [] [text "(more = cheaper!)"]
         , buttonRow address
-        , div [] [text ( "Total: " ++ formatAmount amount )]
         ]
-
-
-formatAmount : Int -> String
-formatAmount amount =
-    "$" ++ toString (toFloat amount / 100)
 
 
 buttonRow : Signal.Address Action -> Html
@@ -250,7 +257,8 @@ buttonRow address =
 checkoutButton : Signal.Address Action -> Int -> Html
 checkoutButton address amount =
     div [checkoutButtonStyle]
-        [ button
+        [ h3 [] [text ( formatAmount amount )]
+        , button
             [ onClick address Open
             , disabled (amount <= 0)
             ]
@@ -258,22 +266,19 @@ checkoutButton address amount =
         ]
 
 
-confirmationBox : Maybe (Result String ChargeSuccess) -> Html
-confirmationBox maybeResult =
-    let lines =
-        case maybeResult of
-            Just result ->
-                case result of
-                    Err msg ->
-                        [text "Yikes! Your charge didn't go through, contact Nick asap"]
-                    Ok response ->
-                        [ p [] [text "You're all set!"]
-                        , p [] [text ("Save your charge ID: " ++ response.chargeID)]
-                        ]
-            Nothing ->
-                [text ""]
-    in
-        div [confirmationBoxStyle] lines
+formatAmount : Int -> String
+formatAmount amount =
+    "$" ++ toString (toFloat amount / 100)
+
+
+
+
+confirmationBox : ChargeSuccess -> Html
+confirmationBox chargeSuccess =
+    div [confirmationBoxStyle]
+        [ h4 [] [text "You're all set!"]
+        , h4 [] [text ("Save your charge ID: " ++ chargeSuccess.chargeID)]
+        ]
 
 
 
