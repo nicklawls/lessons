@@ -109,7 +109,7 @@ type Action
     | Configure -- supply necessary checkout params to stripe
     | Open -- copy the optional params and open the checkout form
     | TokenDispatch (Maybe Token) -- send the token to wherever it needs to go
-    | RecieveFromServer (Maybe ChargeSuccess) -- recive comfirmation of charge
+    | Confirm (Maybe ChargeSuccess) -- recive comfirmation of charge
     | Close -- close the modal
     | Choose Int String -- change the stripe form
 
@@ -144,7 +144,7 @@ update address model =
                 Nothing -> -- TODO: Stripe error, might want a Result
                     noFx model
 
-        RecieveFromServer maybeResult ->
+        Confirm maybeResult ->
             case maybeResult of
                 Just result ->
                     noFx { model | confirmation <- Just (Ok result)}
@@ -173,7 +173,7 @@ postCharge : ChargeRequest -> Effects Action
 postCharge chargeRequest =
     jsonPost decodeResponse "http://localhost:8081/charge" (encodeRequest chargeRequest)
         |> Task.toMaybe
-        |> Task.map RecieveFromServer
+        |> Task.map Confirm
         |> Effects.task
 
 
