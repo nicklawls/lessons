@@ -147,8 +147,8 @@ update address model =
                         ( model
                         , postCharge (token, model.info.amount)
                         )
-                Nothing -> -- TODO: Stripe.js error, might want a Result
-                    noFx model
+                Nothing -> -- Stripe has an error for bad connectivity while modal is open, so will only hit if connection goes down between hitting Pay and js sending the token back
+                    noFx { model | state <- Failed "Looks like Stripe is having some issues, try again later" }
 
         Confirm maybeResult ->
             case maybeResult of
