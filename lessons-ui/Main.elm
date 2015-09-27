@@ -38,7 +38,6 @@ type alias Model =
 
 
 type alias UserInfo = (Name,Email)
-
 type alias Name = String
 type alias Email = String
 type alias PublishableKey = String
@@ -244,7 +243,7 @@ view address model =
             Ready ->
                 [ userInput address model.user
                 , selector address
-                , checkoutButton address model.info.amount
+                , checkoutButton address model.info.amount model.user
                 ]
 
             Failed error ->
@@ -259,6 +258,7 @@ view address model =
             , div [ contentStyle ] content
             , footer [ bottomStyle ] [text "Copyright Nick Lawler 2015"]
             ]
+
 
 userInput : Signal.Address Action -> UserInfo -> Html
 userInput address (name,email) =
@@ -297,14 +297,14 @@ buttonRow address =
             , button [onClick address (Choose 7000 "3 hours")] [text "3 hours"]
             ]
 
-
-checkoutButton : Signal.Address Action -> Int -> Html
-checkoutButton address amount =
+-- TODO: Replace ad-hoc user check with actual validation
+checkoutButton : Signal.Address Action -> Int -> UserInfo -> Html
+checkoutButton address amount (name,email) =
     div [checkoutButtonStyle]
         [ h3 [] [text ( formatAmount amount )]
         , button
             [ onClick address Open
-            , disabled (amount <= 0)
+            , disabled (amount <= 0 || name == "" || email == "")
             ]
             [text "Checkout"]
         ]
