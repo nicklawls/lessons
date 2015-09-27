@@ -1,15 +1,15 @@
 module Main where
 
 import StartApp
-import Html exposing (Html, text, div, button)
+import Html exposing (Html, text,p, div, button, header, footer)
 import Html.Events exposing (onClick)
-import Html.Attributes exposing (id, style)
+import Html.Attributes exposing (style, hidden, disabled)
 import Json.Decode exposing (Decoder, string, object1, (:=))
 import Json.Encode as Encode
 import Effects exposing (Effects)
 import Task exposing (Task, andThen, succeed)
 import Http exposing (Body, Error, defaultSettings, fromJson)
-import Style exposing (midStyle, contentStyle, topStyle, bottomStyle, sideStyle, containerStyle)
+import Style exposing (..)
 import Css exposing (setViewport)
 
 -- Refactoring plan
@@ -128,7 +128,7 @@ update address model =
                 |> Effects.task
             )
 
-        Open -> -- TODO handle amount == 0
+        Open ->
             ( model
             , Signal.send openMailbox.address model.info
                 |> Task.map (always NoOp)
@@ -211,27 +211,36 @@ view address model =
     div
     [ containerStyle ]
     [ setViewport
-    , div [ topStyle ] [ text "header" ]
-    , div
-      [ midStyle ]
-      [ div [ sideStyle ] [text "left"]
-      , div
+    , header [ topStyle ] [ text "header" ]
+    , div [ midStyle ]
+      [ div
         [ contentStyle ]
-        [ text "How many lessons would you like to buy?"
-        , buttonRow address
-        , text ( "Total: $" ++ toString model.info.amount )
+        [ selector address model.info.amount
         , checkoutButton address model.info.amount
         , confirmationBox model.confirmation
         ]
-      , div [ sideStyle ] [text "right"]
       ]
-    , div [ bottomStyle ] [text "footer"]
+    , footer [ bottomStyle ] [text "footer"]
     ]
+
+
+selector : Signal.Address Action -> Int -> Html
+selector address amount =
+    div [selectorStyle]
+        [ div [] [text "How many lessons would you like to buy?"]
+        , buttonRow address
+        , div [] [text ( "Total: " ++ formatAmount amount )]
+        ]
+
+
+formatAmount : Int -> String
+formatAmount amount =
+    "$" ++ toString (toFloat amount / 100)
 
 
 buttonRow : Signal.Address Action -> Html
 buttonRow address =
-        div []
+        div [ buttonRowStyle ]
             [ button [onClick address (Choose 2500 "1 hour")] [text "1 hour"]
             , button [onClick address (Choose 4500 "2 hours")] [text "2 hours"]
             , button [onClick address (Choose 7000 "3 hours")] [text "3 hours"]
@@ -240,22 +249,33 @@ buttonRow address =
 
 checkoutButton : Signal.Address Action -> Int -> Html
 checkoutButton address amount =
-    if | amount > 0 ->
-            button [onClick address Open] [text "Checkout"] -- may have to prevent default
-       | otherwise -> text ""
+    div [checkoutButtonStyle]
+        [ button
+            [ onClick address Open
+            , disabled (amount <= 0)
+            ]
+            [text "Checkout"]
+        ]
 
 
 confirmationBox : Maybe (Result String ChargeSuccess) -> Html
 confirmationBox maybeResult =
-    case maybeResult of
-        Just result ->
-            case result of
-                Err msg ->
-                    text "Yikes! Your charge didn't go through, contact Nick asap"
-                Ok response ->
-                    text ("You're all set! Save your charge ID: " ++ response.chargeID)
-        Nothing ->
-            text ""
+    let lines =
+        case maybeResult of
+            Just result ->
+                case result of
+                    Err msg ->
+                        [text "Yikes! Your charge didn't go through, contact Nick asap"]
+                    Ok response ->
+                        [ p [] [text "You're all set!"]
+                        , p [] [text ("Save your charge ID: " ++ response.chargeID)]
+                        ]
+            Nothing ->
+                [text ""]
+    in
+        div [confirmationBoxStyle] lines
+
+
 
 
 app =

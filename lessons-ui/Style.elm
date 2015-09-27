@@ -1,9 +1,12 @@
 module Style ( midStyle
              , topStyle
              , bottomStyle
-             , sideStyle
              , contentStyle
              , containerStyle
+             , selectorStyle
+             , buttonRowStyle
+             , checkoutButtonStyle
+             , confirmationBoxStyle
              ) where
 
 import Html
@@ -33,9 +36,34 @@ midStyle =
 bottomStyle : Html.Attribute
 bottomStyle = style <| end 5 []
 
-sideStyle : Html.Attribute
-sideStyle = style <| side []
 
+contentItem : Int -> Styles -> Styles
+contentItem n styles =
+    styles
+        |> centered
+        |> column
+        |> Flex.grow n
+
+checkoutButtonStyle : Html.Attribute
+checkoutButtonStyle =
+    style
+        <| contentItem 1 []
+
+
+confirmationBoxStyle : Html.Attribute
+confirmationBoxStyle =
+    style
+        <| contentItem 1 []
+
+
+buttonRowStyle : Html.Attribute
+buttonRowStyle = style []
+
+selectorStyle : Html.Attribute
+selectorStyle =
+    style
+        -- <| column moved it into content item
+        <| contentItem 1 []
 
 
 contentStyle : Html.Attribute
@@ -47,7 +75,7 @@ containerStyle =
     style
         <| column
         <| Text.color (rgba 255 255 255 1 )
-        <| Dimension.height 1000 []
+        <| Dimension.height 900 []
 
 
 
@@ -63,15 +91,7 @@ end n styles =
     |> Background.color (rgba 26 188 156 1)
     |> centered
     |> Flex.grow n
-
-
-side : Styles -> Styles
-side styles =
-  styles
-    -- |> Dimension.height 50
-    |> Background.color (rgba 52 152 219 1)
-    |> centered
-    |> Flex.grow 1
+    |> Flex.shrink 0
 
 
 content : Styles -> Styles
@@ -81,7 +101,7 @@ content styles =
     -- |> Dimension.height 200
     |> Background.color (rgba 52 73 94 1)
     |> centered
-    |> Flex.grow 3
+    |> Flex.grow 1
     |> column
 
 

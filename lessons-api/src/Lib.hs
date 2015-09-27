@@ -45,7 +45,7 @@ type ChargeAPI = "charge" :> ReqBody '[JSON] ChargeRequest :> Post '[JSON] Charg
 data ChargeRequest
  = ChargeRequest
  { stripeToken :: T.Text
- , amount :: Amount -- Ammount is exported by Web.Stripe.Charge
+ , amount :: Amount -- Amount is exported by Web.Stripe.Charge
  } deriving (Show, Generic)
 
 
@@ -56,16 +56,16 @@ getKey Test = getEnv "STRIPE_TEST_SECRET_KEY"
 
 -- TODO Unit Tests
 executeCharge :: StripeConfig -> TokenId -> Amount -> EitherT ServantErr IO Charge
-executeCharge config tokenID amnt = do
-    chargeResult <- liftIO $ stripe config (chargeCardByToken tokenID USD amnt Nothing)
-    case chargeResult of
-        Left stripeErr -> left err500 -- TODO Customize Error
-        Right customer -> right customer
+executeCharge config tokenID amnt =
+    do  chargeResult <- liftIO $ stripe config (chargeCardByToken tokenID USD amnt Nothing)
+        case chargeResult of
+            Left stripeErr -> left err500 -- TODO Customize Error
+            Right charge -> right charge
 
 
 charge :: ChargeRequest -> EitherT ServantErr IO ChargeSuccess
-charge request = do
-       keyString <- liftIO $ getKey Test
+charge request =
+    do keyString <- liftIO $ getKey Test
        let config = StripeConfig (pack keyString)
        let tokenID = TokenId (stripeToken request)
        let amnt = amount request
