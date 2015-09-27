@@ -256,7 +256,7 @@ view address model =
             [ setViewport
             , header [ topStyle ] [ h1 [] [text "Pay For Lessons With Nick"] ]
             , div [ contentStyle ] content
-            , footer [ bottomStyle ] [text "Copyright Nick Lawler 2015" ]
+            , footer [ bottomStyle ] [text "© Nick Lawler 2015" ] -- TODO: get current year
             ]
 
 
