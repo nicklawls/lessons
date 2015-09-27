@@ -74,7 +74,12 @@ type FormState
 type alias Token = String
 
 
-type alias ChargeRequest = (Token,Int)
+type alias ChargeRequest =
+    { stripeToken : Token
+    , amount : Int
+    , name : Name
+    , email : Email
+    }
 
 
 type alias ChargeSuccess =
@@ -154,8 +159,10 @@ update address model =
         TokenDispatch maybeToken ->
             case maybeToken of
                 Just token ->
+                    let (name,email) = model.user
+                    in
                         ( model
-                        , postCharge (token, model.info.amount)
+                        , postCharge (ChargeRequest token model.info.amount name email)
                         )
                 Nothing -> -- Stripe has an error for bad connectivity while modal is open, so will only hit if connection goes down between hitting Pay and js sending the token back
                     noFx { model | state <- Failed "Looks like Stripe is having some issues, try again later" }
@@ -212,10 +219,12 @@ jsonPost decoder url body =
 
 
 encodeRequest : ChargeRequest -> Body
-encodeRequest (token,amount) =
+encodeRequest req =
     Encode.object
-        [ ("stripeToken",  Encode.string token)
-        , ("amount", Encode.int amount)
+        [ ("stripeToken",  Encode.string req.stripeToken)
+        , ("amount", Encode.int req.amount)
+        , ("name", Encode.string req.name)
+        , ("email", Encode.string req.email)
         ]
         |> Encode.encode 4
         |> Http.string
@@ -247,8 +256,7 @@ view address model =
         div [ containerStyle ]
             [ setViewport
             , header [ topStyle ] [ h1 [] [text "Bass Drum Lessons Bruh"] ]
-            , div [ contentStyle ]
-                  content
+            , div [ contentStyle ] content
             , footer [ bottomStyle ] [text "Copyright Nick Lawler 2015"]
             ]
 
