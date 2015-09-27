@@ -1,5 +1,4 @@
-module Style ( midStyle
-             , topStyle
+module Style ( topStyle
              , bottomStyle
              , contentStyle
              , containerStyle
@@ -7,6 +6,8 @@ module Style ( midStyle
              , buttonRowStyle
              , checkoutButtonStyle
              , confirmationBoxStyle
+             , userInputStyle
+             , inputStyle
              ) where
 
 import Html
@@ -27,15 +28,12 @@ import Color exposing (Color, rgba, complement)
 topStyle : Html.Attribute
 topStyle = style <| end 10 []
 
-midStyle : Html.Attribute
-midStyle =
-    style
-        <| Flex.grow 80
-        <| flex []
 
 bottomStyle : Html.Attribute
 bottomStyle = style <| end 5 []
 
+inputStyle : Html.Attribute
+inputStyle = style []
 
 contentItem : Int -> Styles -> Styles
 contentItem n styles =
@@ -47,6 +45,7 @@ contentItem n styles =
 checkoutButtonStyle : Html.Attribute
 checkoutButtonStyle =
     style
+        <| Background.color (rgba 98 64 204 1)
         <| contentItem 1 []
 
 -- TODO: add visibility-hidden on bool arg, or equivalent
@@ -55,6 +54,11 @@ confirmationBoxStyle =
     style
         <| contentItem 1 []
 
+userInputStyle : Html.Attribute
+userInputStyle =
+    style
+        <| Background.color (rgba 98 185 150 1)
+        <| contentItem 1 []
 
 buttonRowStyle : Html.Attribute
 buttonRowStyle = style []
@@ -62,7 +66,7 @@ buttonRowStyle = style []
 selectorStyle : Html.Attribute
 selectorStyle =
     style
-        -- <| column moved it into content item
+        <| Background.color (rgba 98 185 204 1)
         <| contentItem 1 []
 
 
@@ -97,12 +101,11 @@ end n styles =
 content : Styles -> Styles
 content styles =
   styles
-    -- |> Dimension.width 200
-    -- |> Dimension.height 200
     |> Background.color (rgba 52 73 94 1)
     |> centered
-    |> Flex.grow 1
+    |> Flex.grow 80
     |> column
+    |> Flex.alignItems Flex.AIStretch
 
 
 column : Styles -> Styles

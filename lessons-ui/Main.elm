@@ -1,9 +1,9 @@
 module Main where
 
 import StartApp
-import Html exposing (Html, text, p, div, button, header, footer, h1, h2, h3, h4)
-import Html.Events exposing (onClick)
-import Html.Attributes exposing (style, hidden, disabled)
+import Html exposing (Html, text, p, div, button, header, footer, h1, h2, h3, h4, input)
+import Html.Events exposing (onClick, on, targetValue)
+import Html.Attributes exposing (style, hidden, disabled, placeholder, value)
 import Json.Decode exposing (Decoder, string, object1, (:=))
 import Json.Encode as Encode
 import Effects exposing (Effects)
@@ -31,20 +31,19 @@ from the Form.Model and maybe the CheckoutState
 type alias Model =
     { key : PublishableKey
     , locale : Locale
+    , user : UserInfo
     , info : FormInfo
     , state : FormState -- 3 states
     }
 
--- custom type to define the possible form state, more understandable than Maybe (Result String ChargeSuccess)
-type FormState
-    = Ready
-    | Failed String
-    | Succeeded ChargeSuccess
 
+type alias UserInfo = (Name,Email)
 
+type alias Name = String
+type alias Email = String
 type alias PublishableKey = String
-
 type alias Locale = String
+
 
 type alias FormInfo =
     { amount : Int
@@ -62,6 +61,26 @@ type alias FormInfo =
     , alipay : Maybe Bool -- has actual states 'auto', true, and false
     , alipayReusable : Bool
     }
+
+
+-- custom type to define the possible form states, more understandable than Maybe (Result String ChargeSuccess)
+type FormState
+    = Ready
+    | Failed String
+    | Succeeded ChargeSuccess
+
+
+-- TODO: Send the full token structure
+type alias Token = String
+
+
+type alias ChargeRequest = (Token,Int)
+
+
+type alias ChargeSuccess =
+    { chargeID : String
+    }
+
 
 defaultInfo : FormInfo
 defaultInfo =
@@ -82,32 +101,16 @@ defaultInfo =
     }
 
 
--- TODO: Send the full token structure
-type alias Token = String
-
-
-type alias ChargeRequest = (Token,Int)
-
-
-type alias ChargeSuccess =
-    { chargeID : String
-    }
-
-
 init : PublishableKey -> Locale -> (Model, Effects Action)
 init key locale =
     ( { key = key
       , locale = locale
       , info = defaultInfo
+      , user = ("","")
       , state = Ready
       }
     , Effects.task (succeed Configure)
     )
-
-
-noFx : model -> (model, Effects a)
-noFx model =
-    (model, Effects.none)
 
 
 type Action
@@ -117,7 +120,14 @@ type Action
     | TokenDispatch (Maybe Token) -- send the token to wherever it needs to go
     | Confirm (Maybe ChargeSuccess) -- recive comfirmation of charge
     | Close -- close the modal
+    | NewName Name
+    | NewEmail Email
     | Choose Int String -- change the stripe form
+
+
+noFx : model -> (model, Effects a)
+noFx model =
+    (model, Effects.none)
 
 
 -- TODO: Work in the optional opened and closed callbacks to get a full picture of the modal's state
@@ -157,12 +167,18 @@ update address model =
                 Nothing ->
                     noFx { model | state <- Failed "There's been an error talking to the server, tell Nick ASAP!" } -- TODO: maybe add action and effect to return to ready state after timeout
 
-        Close -> -- no need to actually call, modal closes after submit, iframe js already listening for esc
+        Close -> -- no need to actually call, stripe's iframe already listening for esc and clicks
             ( model
             , Signal.send closeMailbox.address ()
                 |> Task.map (always NoOp)
                 |> Effects.task
             )
+
+        NewName name ->
+            noFx { model | user <- (name, snd model.user) }
+
+        NewEmail email ->
+            noFx { model | user <- (fst model.user, email) }
 
         Choose newAmt newDes ->
             let info = model.info
@@ -216,25 +232,45 @@ view : Signal.Address Action -> Model -> Html
 view address model =
     let content =
         case model.state of
-            Ready ->  [ selector address
-                      , checkoutButton address model.info.amount
-                      ]
+            Ready ->
+                [ userInput address model.user
+                , selector address
+                , checkoutButton address model.info.amount
+                ]
 
-            Failed error -> [ div [] [text error] ] -- TODO: maybe do nothing here
+            Failed error ->
+                [ div [] [text error] ] -- TODO: maybe do nothing here
 
-            Succeeded chargeSuccess -> [ confirmationBox chargeSuccess ]
+            Succeeded chargeSuccess ->
+                [ confirmationBox chargeSuccess ]
     in
         div [ containerStyle ]
             [ setViewport
             , header [ topStyle ] [ h1 [] [text "Bass Drum Lessons Bruh"] ]
-            , div [ midStyle ]
-                  [ div [ contentStyle ]
-                        content
-                  ]
+            , div [ contentStyle ]
+                  content
             , footer [ bottomStyle ] [text "Copyright Nick Lawler 2015"]
             ]
 
-
+userInput : Signal.Address Action -> UserInfo -> Html
+userInput address (name,email) =
+    div [userInputStyle]
+        [ h2 [] [text "First Things First"]
+        , input
+            [ placeholder "Name"
+            , value name
+            , on "input" targetValue (Signal.message address << NewName)
+            , inputStyle
+            ]
+            []
+        , input
+            [ placeholder "Email"
+            , value email
+            , on "input" targetValue (Signal.message address << NewEmail)
+            , inputStyle
+            ]
+            []
+        ]
 
 selector : Signal.Address Action -> Html
 selector address =
@@ -271,16 +307,12 @@ formatAmount amount =
     "$" ++ toString (toFloat amount / 100)
 
 
-
-
 confirmationBox : ChargeSuccess -> Html
 confirmationBox chargeSuccess =
     div [confirmationBoxStyle]
         [ h4 [] [text "You're all set!"]
         , h4 [] [text ("Save your charge ID: " ++ chargeSuccess.chargeID)]
         ]
-
-
 
 
 app =
