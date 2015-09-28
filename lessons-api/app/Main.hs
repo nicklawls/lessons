@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Lessons
 import Network.Wai
 import Network.Wai.Handler.Warp
 import Network.Wai.Middleware.Cors
@@ -11,19 +11,19 @@ import Network.Wai.Middleware.RequestLogger
 
 
 main :: IO ()
-main = do
-    print "Lessons running on port 8081 "
-    run 8081 $ logStdoutDev (checkoutCors app)
+main =
+    do print "Lessons running on port 8081"
+       run 8081 $ logStdoutDev (checkoutCors app)
 
 
 checkoutCors :: Middleware
-checkoutCors = cors (const $ Just checkoutCorsResourcePolicy)
+checkoutCors = cors $ const (Just checkoutCorsResourcePolicy)
 
 
 checkoutCorsResourcePolicy :: CorsResourcePolicy
 checkoutCorsResourcePolicy =
     CorsResourcePolicy
-        { corsOrigins = Nothing
+        { corsOrigins = Nothing -- gives you /*
         , corsMethods = simpleMethods
         , corsRequestHeaders = simpleHeaders -- adds "Content-Type" to defaults
         , corsExposedHeaders = Nothing
