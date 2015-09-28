@@ -247,7 +247,7 @@ view address model =
                 ]
 
             Failed error ->
-                [ div [] [text error] ] -- TODO: maybe do nothing here
+                [ div [errorStyle] [text error] ] -- TODO: maybe do nothing here
 
             Succeeded chargeSuccess ->
                 [ confirmationBox chargeSuccess ]

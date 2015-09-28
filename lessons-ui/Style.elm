@@ -10,6 +10,7 @@ module Style ( topStyle
              , inputStyle
              , buttonStyle
              , decreaseMargin
+             , errorStyle
              ) where
 
 import Html
@@ -101,7 +102,11 @@ containerStyle =
         <| Text.color (rgba 215 216 219 1 )
         <| Dimension.height 900 []
 
-
+errorStyle : Html.Attribute
+errorStyle =
+    style
+        <| column
+        <| centered []
 
 flex : Styles -> Styles
 flex styles =
