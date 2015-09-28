@@ -4,13 +4,13 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Poop.Trello where
+module Web.Trello where
 
 import qualified Data.Text as T
 import Data.Aeson
 import GHC.Generics
 import Servant
-import Poop.Trello.Card
+import Web.Trello.Card
 import Control.Monad.Trans.Either
 import Servant.Client
 

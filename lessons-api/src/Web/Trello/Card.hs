@@ -1,11 +1,11 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Poop.Trello.Card where
+module Web.Trello.Card where
 
 import qualified Data.Text as T
 import Data.Aeson
 import GHC.Generics
-import Poop.Trello.Badges
+import Web.Trello.Badges
 
 
 data Card = Card

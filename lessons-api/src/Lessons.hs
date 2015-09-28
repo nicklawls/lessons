@@ -15,7 +15,7 @@ import GHC.Generics
 import Web.Stripe
 import Web.Stripe.Token
 import Web.Stripe.Charge
-import Poop.Trello
+import Web.Trello
 import Network.Wai
 import qualified Data.Text as T
 import Data.ByteString.Char8 (pack)

@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Poop.Trello.Badges where
+module Web.Trello.Badges where
 
 import qualified Data.Text as T
 import Data.Aeson
