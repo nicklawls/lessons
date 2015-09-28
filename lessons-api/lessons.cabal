@@ -16,9 +16,9 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Lessons
-                     , Poop.Trello
-                     , Poop.Trello.Card
-                     , Poop.Trello.Badges
+                     , Web.Trello
+                     , Web.Trello.Card
+                     , Web.Trello.Badges
   build-depends:       base >= 4.7 && < 5
                      , aeson >= 0.8
                      , either
