@@ -5,15 +5,17 @@ import Network.Wai
 import Network.Wai.Handler.Warp
 import Network.Wai.Middleware.Cors
 import Network.Wai.Middleware.RequestLogger
-
+import System.Environment (getEnv)
 
 -- pull out Live/Test split into main, pick a logger
 
 
 main :: IO ()
 main =
-    do print "Lessons running on port 443"
-       run 443 $ logStdoutDev (checkoutCors app)
+    do portStr <- getEnv "PORT"
+       let port = read portStr :: Port
+       print ("Lessons running on port " ++ portStr)
+       run port $ logStdoutDev (checkoutCors app)
 
 
 checkoutCors :: Middleware
