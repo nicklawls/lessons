@@ -9,4 +9,4 @@ The frontend is an Elm application that talks to Stripe Checkout over a port in 
 
 Use `stack install` to build and install the `lessons` server executable. `stack exec lessons` will get it running on port 443.
 
-Use `elm make ui/Main.elm --output dist/app.js` to build the ui, and run `elm reactor` to start a dev server on localhost 8000. Use the reactor's interface to navigate into ui and open up `index.html` to view the app.
+Use `elm make ui/Main.elm --output ui/app.js` to build the ui, and run `elm reactor` to start a dev server on localhost 8000. Use the reactor's interface to navigate into ui and open up `index.html` to view the app.
