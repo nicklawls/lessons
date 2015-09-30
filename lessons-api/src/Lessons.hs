@@ -16,12 +16,14 @@ import Web.Stripe
 import Web.Stripe.Token
 import Web.Stripe.Charge
 import Web.Trello
+import Web.Trello.Card
 import Network.Wai
 import qualified Data.Text as T
 import Data.ByteString.Char8 (pack)
 import Data.Monoid
 
 -- TODO Create Config.hs with all the api keys and deployment state, and wrap the server api in ReaderT Config, keys should all be text
+-- TODO Put the whole bitch in stm and do the trello call async
 
 data StripeMode
     = Live
@@ -73,9 +75,29 @@ executeCharge :: StripeConfig -> TokenId -> Amount -> EitherT ServantErr IO Char
 executeCharge config tokenID amnt =
     do chargeResult <- liftIO . stripe config $ (chargeCardByToken tokenID USD amnt Nothing)
        case chargeResult of
-           Left err -> (liftIO . print $ err) >>= const (left err500) -- TODO Customize Error
+           Left err ->
+                printLeft err
            Right charge ->
                 right charge
+
+
+executeTrello :: NewCard -> T.Text -> T.Text -> EitherT ServantErr IO Card
+executeTrello newCard key token =
+    do result <- liftIO . runEitherT $ createCard newCard (Just key) (Just token)
+       case result of
+        Left err ->
+            printLeft err
+        Right card ->
+            right card
+
+
+-- print the error to the console before calling left on err500
+-- TODO Customize Error
+printLeft :: Show a => a -> EitherT ServantErr IO b
+printLeft err = do
+    liftIO . print $ err
+    left err500
+
 
 
 charge :: ChargeRequest -> EitherT ServantErr IO ChargeSuccess
@@ -89,20 +111,17 @@ charge request =
        trelloToken <- liftIO getTrelloToken
        listId <- liftIO getListId
        let chargeIdRaw = extractId (chargeId chrg)
-       let newCard = cardTemplate amnt (Lessons.name request) (Lessons.email request) chargeIdRaw (T.pack listId)
-       trelloResult <- liftIO . runEitherT $ createCard newCard (Just $ T.pack trelloKey) (Just $ T.pack trelloToken)
-       case trelloResult of
-           Left err ->
-                (liftIO . print $ err) >>= const (left err500)
-           Right _ ->
-            right (ChargeSuccess chargeIdRaw)
+           newCard = cardTemplate amnt (Lessons.name request) (Lessons.email request) chargeIdRaw (T.pack listId)
+       _ <- executeTrello newCard (T.pack trelloKey) (T.pack trelloToken)
+       right (ChargeSuccess chargeIdRaw)
 
 
 -- TODO calculate number of lessons
 cardTemplate :: Amount -> Name -> Lessons.Email -> T.Text -> T.Text -> NewCard
 cardTemplate a n e c l =
-    NewCard ("Purchased Lesson(s) with " <> n) (Just (e <> "\n" <> T.pack (show a) <> "\n" <> "Charge ID: " <> c))  (Just Top) Nothing l Nothing Nothing Nothing Nothing Nothing Nothing
-
+    NewCard ("Purchased Lesson(s) with " <> n) (Just message) (Just Top) Nothing l Nothing Nothing Nothing Nothing Nothing Nothing
+        where
+            message = e <> "\n" <> T.pack (show a) <> "\n" <> "Charge ID: " <> c
 
 
 extractId :: ChargeId -> T.Text
