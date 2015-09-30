@@ -199,7 +199,7 @@ update address model =
 
 postCharge : ChargeRequest -> Effects Action
 postCharge chargeRequest =
-    jsonPost decodeResponse "http://localhost:8081/charge" (encodeRequest chargeRequest)
+    jsonPost decodeResponse "https://lessonsapi.herokuapp.com/charge" (encodeRequest chargeRequest)
         |> Task.toMaybe
         |> Task.map Confirm
         |> Effects.task

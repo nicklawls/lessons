@@ -1,1 +1,1 @@
-web: stack exec lessons
+web: lessons
