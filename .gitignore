@@ -1,3 +1,4 @@
-lessons-ui/elm-stuff
-lessons-ui/elm.js
-lessons-api/.stack-work
+elm-stuff
+ui/app.js
+.stack-work
+dist

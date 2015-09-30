@@ -1,7 +1,0 @@
-flags: {}
-packages:
-- '.'
-extra-deps: [
-stripe-haskell-0.1.4.1
-]
-resolver: lts-3.2
