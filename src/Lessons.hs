@@ -21,6 +21,8 @@ import Network.Wai
 import qualified Data.Text as T
 import Data.ByteString.Char8 (pack)
 import Data.Monoid
+import Control.Monad.Reader
+import Config
 
 -- TODO Create Config.hs with all the api keys and deployment state, and wrap the server api in ReaderT Config, keys should all be text
 -- TODO Put the whole bitch in stm and do the trello call async
@@ -100,20 +102,20 @@ printLeft err = do
 
 
 
-charge :: ChargeRequest -> EitherT ServantErr IO ChargeSuccess
-charge request =
-    do stripeKey <- liftIO $ getStripeKey Test
-       let config = StripeConfig (pack stripeKey)
-           tokenID = TokenId (stripeToken request)
-           amnt = amount request
-       chrg <- executeCharge config tokenID amnt
-       trelloKey <- liftIO getTrelloKey
-       trelloToken <- liftIO getTrelloToken
-       listId <- liftIO getListId
-       let chargeIdRaw = extractId (chargeId chrg)
-           newCard = cardTemplate amnt (Lessons.name request) (Lessons.email request) chargeIdRaw (T.pack listId)
-       _ <- executeTrello newCard (T.pack trelloKey) (T.pack trelloToken)
-       right (ChargeSuccess chargeIdRaw)
+charge :: ChargeRequest -> ReaderT Config (EitherT ServantErr IO) ChargeSuccess
+charge request = undefined
+    -- do stripeKey <- liftIO $ getStripeKey Test
+    --    let config = StripeConfig (pack stripeKey)
+    --        tokenID = TokenId (stripeToken request)
+    --        amnt = amount request
+    --    chrg <- executeCharge config tokenID amnt
+    --    trelloKey <- liftIO getTrelloKey
+    --    trelloToken <- liftIO getTrelloToken
+    --    listId <- liftIO getListId
+    --    let chargeIdRaw = extractId (chargeId chrg)
+    --        newCard = cardTemplate amnt (Lessons.name request) (Lessons.email request) chargeIdRaw (T.pack listId)
+    --    _ <- executeTrello newCard (T.pack trelloKey) (T.pack trelloToken)
+    --    right (ChargeSuccess chargeIdRaw)
 
 
 -- TODO calculate number of lessons
@@ -128,14 +130,20 @@ extractId :: ChargeId -> T.Text
 extractId (ChargeId text) = text
 extractId _ = "Expansion Object"
 
-
-server :: Server ChargeAPI
-server = charge
-
+type AppM = ReaderT Config (EitherT ServantErr IO)
 
 chargeAPI :: Proxy ChargeAPI
 chargeAPI = Proxy
 
+readerToEither :: Config -> AppM :~> EitherT ServantErr IO
+readerToEither cfg = Nat $ \x -> runReaderT x cfg
 
-app :: Application
-app = serve chargeAPI server
+readerServer :: Config -> Server ChargeAPI
+readerServer cfg = enter (readerToEither cfg) server
+
+server :: ServerT ChargeAPI AppM
+server = charge
+
+
+app :: Config -> Application
+app cfg = serve chargeAPI (readerServer cfg)
