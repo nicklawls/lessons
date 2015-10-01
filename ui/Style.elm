@@ -18,11 +18,8 @@ import Html.Attributes exposing (id, style)
 import Css exposing (Styles, setViewport)
 import Css.Flex as Flex
 import Css.Display as Display exposing (display)
-import Css.Shadow as Shadow
 import Css.Background as Background
 import Css.Text as Text
-import Css.Font as Font
-import Css.Padding as Padding
 import Css.Dimension as Dimension
 import Css.Margin as Margin
 import Color exposing (Color, rgba, complement)

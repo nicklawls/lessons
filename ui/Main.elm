@@ -322,7 +322,7 @@ confirmationBox chargeSuccess =
         , h4 [] [text ("Might want to save this ID: " ++ chargeSuccess.chargeID)]
         ]
 
-
+app : StartApp.App Model
 app =
     StartApp.start
         { init = init "pk_test_Y31x7Mqyi1iY63IQb95IAORm" "auto"

@@ -15,7 +15,7 @@ main =
     do portStr <- getEnv "PORT"
        let port = read portStr :: Port
        print ("Lessons running on port " ++ portStr)
-       run port $ logStdoutDev (checkoutCors app)
+       run port $ logStdout (checkoutCors app)
 
 
 checkoutCors :: Middleware
