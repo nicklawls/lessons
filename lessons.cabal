@@ -19,6 +19,7 @@ library
                      , Web.Trello
                      , Web.Trello.Card
                      , Web.Trello.Badges
+                     , Config
   build-depends:       base >= 4.7 && < 5
                      , aeson >= 0.8
                      , either
