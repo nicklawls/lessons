@@ -12,20 +12,12 @@ import Http exposing (Body, Error, defaultSettings, fromJson)
 import Style exposing (..)
 import Css exposing (setViewport)
 
--- Refactoring plan
-{-|
+{-| Refactoring plan
 
-type alias Model =
-    { key : PublishableKey
-      locale : Locale
-      checkout : CheckoutState -- nee FormInfo, repurposed
-      selector : Selector.Model -- user defined form component
-      confirm : Confirmation.Model -- user defined confirmation component
-    }
+1. Substitue FormState with a Maybe String and a Maybe ChargeSuccess, update the view acoordingly
+2.
 
 
-that recieves a token only, passes it to the server with some extra specified info
-from the Form.Model and maybe the CheckoutState
 |-}
 
 type alias Model =
@@ -33,7 +25,7 @@ type alias Model =
     , locale : Locale
     , user : UserInfo
     , info : FormInfo
-    , state : FormState -- 3 states
+    , state : FormState 
     }
 
 
@@ -65,6 +57,7 @@ type alias FormInfo =
 -- custom type to define the possible form states, more understandable than Maybe (Result String ChargeSuccess)
 type FormState
     = Ready
+    | Waiting
     | Failed String
     | Succeeded ChargeSuccess
 
@@ -159,8 +152,7 @@ update address model =
             case maybeToken of
                 Just token ->
                     let (name,email) = model.user
-                    in
-                        ( model
+                    in  ( { model | state <- Waiting }
                         , postCharge (ChargeRequest token model.info.amount name email)
                         )
                 Nothing -> -- Stripe has an error for bad connectivity while modal is open, so will only hit if connection goes down between hitting Pay and js sending the token back
@@ -245,7 +237,8 @@ view address model =
                 , selector address
                 , checkoutButton address model.info.amount model.user
                 ]
-
+            Waiting ->
+                [ div [errorStyle] [text "Please Wait..."] ]
             Failed error ->
                 [ div [errorStyle] [text error] ] -- TODO: maybe do nothing here
 
