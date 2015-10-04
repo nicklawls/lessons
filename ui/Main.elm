@@ -90,7 +90,7 @@ defaultInfo =
     , zipCode = True
     , billingAddress = False
     , shippingAddress = False
-    , email = Just "Nothing"
+    , email = Nothing
     , allowRememberMe = True
     , bitcoin = False
     , alipay = Nothing
@@ -191,7 +191,7 @@ update address model =
 
 postCharge : ChargeRequest -> Effects Action
 postCharge chargeRequest =
-    jsonPost decodeResponse "http://localhost:8082/charge" (encodeRequest chargeRequest)
+    jsonPost decodeResponse "https://lessonsapi.herokuapp.com/charge" (encodeRequest chargeRequest)
         |> Task.toMaybe
         |> Task.map Confirm
         |> Effects.task
@@ -318,7 +318,7 @@ confirmationBox chargeSuccess =
 app : StartApp.App Model
 app =
     StartApp.start
-        { init = init "pk_test_Y31x7Mqyi1iY63IQb95IAORm" "auto"
+        { init = init "pk_live_KtyvCapyvK7xuuwf6C5MpoOr" "auto"
         , update = update
         , view = view
         , inputs = [incomingToken']
