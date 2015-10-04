@@ -191,7 +191,7 @@ update address model =
 
 postCharge : ChargeRequest -> Effects Action
 postCharge chargeRequest =
-    jsonPost decodeResponse "https://lessonsapi.herokuapp.com/charge" (encodeRequest chargeRequest)
+    jsonPost decodeResponse "http://localhost:8082/charge" (encodeRequest chargeRequest)
         |> Task.toMaybe
         |> Task.map Confirm
         |> Effects.task
@@ -318,7 +318,7 @@ confirmationBox chargeSuccess =
 app : StartApp.App Model
 app =
     StartApp.start
-        { init = init "pk_live_KtyvCapyvK7xuuwf6C5MpoOr" "auto"
+        { init = init "pk_test_Y31x7Mqyi1iY63IQb95IAORm" "auto"
         , update = update
         , view = view
         , inputs = [incomingToken']
