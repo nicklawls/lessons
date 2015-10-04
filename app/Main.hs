@@ -13,7 +13,8 @@ main =
     do config <- getConfig
        let logger = case environment config of
                         "TEST" -> logStdoutDev
-                        _      -> logStdout
+                        "PROD" -> logStdout
+                        _      -> error "LESSONS_ENV must be TEST or PROD"
        print $ "Lessons Running on port " ++ show (port config)
        run (port config) $ logger (checkoutCors $ app config)
 

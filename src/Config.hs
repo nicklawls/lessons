@@ -4,11 +4,12 @@ import Web.Stripe
 import Data.Text as T
 import System.Environment
 import Data.ByteString.Char8 as B
-import Control.Monad.Trans
+
 
 type TrelloKey = T.Text
 type TrelloToken = T.Text
 type TrelloList = T.Text
+
 
 data Config = Config
     { stripeConfig :: StripeConfig
@@ -18,6 +19,7 @@ data Config = Config
     , port :: Int
     , environment :: String
     }
+
 
 getConfig :: IO Config
 getConfig =
@@ -29,19 +31,10 @@ getConfig =
        <*> fmap read (getEnv "PORT")
        <*> getEnv "LESSONS_ENV"
 
+
 packEnv :: String -> IO B.ByteString
 packEnv = fmap B.pack . getEnv
 
+
 packEnvText :: String -> IO T.Text
 packEnvText = fmap T.pack . getEnv
-
-
-getTrelloKey :: IO String
-getTrelloKey = getEnv "TRELLO_DEVELOPER_PUBLIC_KEY"
-
-
-getTrelloToken :: IO String
-getTrelloToken = getEnv "TRELLO_MEMBER_TOKEN"
-
-getListId :: IO String
-getListId = getEnv "LESSONS_LIST_ID"
