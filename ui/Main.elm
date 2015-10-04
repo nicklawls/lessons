@@ -11,25 +11,24 @@ import Task exposing (Task, andThen, succeed)
 import Http exposing (Body, Error, defaultSettings, fromJson)
 import Style exposing (..)
 import Css exposing (setViewport)
+import Signal exposing ((<~))
 
 {-| Refactoring plan
 
-1. Substitue FormState with a Maybe String and a Maybe ChargeSuccess, update the view acoordingly
-2.
-
+1. Find a more idiomatic way to acoomplish what FormState is doing
+2. Factor into Elm Architecture based components
 
 |-}
 
 type alias Model =
     { key : PublishableKey
     , locale : Locale
-    , user : UserInfo
+    , user : Name
     , info : FormInfo
     , state : FormState
     }
 
 
-type alias UserInfo = (Name,Email)
 type alias Name = String
 type alias Email = String
 type alias PublishableKey = String
@@ -63,11 +62,14 @@ type FormState
 
 
 -- TODO: Send the full token structure
-type alias Token = String
+type alias Token =
+    { tokenId : String
+    , email : String
+    }
 
 
 type alias ChargeRequest =
-    { stripeToken : Token
+    { tokenId : String
     , amount : Int
     , name : Name
     , email : Email
@@ -103,7 +105,7 @@ init key locale =
     ( { key = key
       , locale = locale
       , info = defaultInfo
-      , user = ("","")
+      , user = ""
       , state = Ready
       }
     , Effects.task (succeed Configure)
@@ -118,7 +120,6 @@ type Action
     | Confirm (Maybe ChargeSuccess) -- recive comfirmation of charge
     | Close -- close the modal
     | NewName Name
-    | NewEmail Email
     | Choose Int String -- change the stripe form
 
 
@@ -148,22 +149,19 @@ update address model =
                 |> Effects.task
             )
 
-        TokenDispatch maybeToken ->
-            case maybeToken of
-                Just token ->
-                    let (name,email) = model.user
-                    in  ( { model | state <- Waiting }
-                        , postCharge (ChargeRequest token model.info.amount name email)
-                        )
-                Nothing -> -- Stripe has an error for bad connectivity while modal is open, so will only hit if connection goes down between hitting Pay and js sending the token back
-                    noFx { model | state <- Failed "Looks like Stripe is having some issues, try again later" }
+        TokenDispatch (Just token) ->
+            ( { model | state <- Waiting }
+               , postCharge (ChargeRequest token.tokenId model.info.amount model.user token.email)
+            )
 
-        Confirm maybeResult ->
-            case maybeResult of
-                Just result ->
-                    noFx { model | state <- Succeeded result }
-                Nothing ->
-                    noFx { model | state <- Failed "There's been an error talking to the server, tell Nick ASAP!" } -- TODO: maybe add action and effect to return to ready state after timeout
+        TokenDispatch Nothing -> -- Stripe has an error for bad connectivity while modal is open, so will only hit if connection goes down between hitting Pay and js sending the token back
+            noFx { model | state <- Failed "Looks like Stripe is having some issues, try again later" }
+
+        Confirm (Just result) ->
+            noFx { model | state <- Succeeded result }
+
+        Confirm Nothing ->
+            noFx { model | state <- Failed "There's been an error talking to the server, tell Nick ASAP!" } -- TODO: maybe add action and effect to return to ready state after timeout
 
         Close -> -- no need to actually call, stripe's iframe already listening for esc and clicks
             ( model
@@ -173,19 +171,13 @@ update address model =
             )
 
         NewName name ->
-            noFx { model | user <- (name, snd model.user) }
-
-        NewEmail email ->
-            noFx { model | user <- (fst model.user, email) }
+            noFx { model | user <- name }
 
         Choose newAmt newDes ->
             let info = model.info
-            in
-                noFx { model |
-                        info <- { info |
-                                    amount <- newAmt
-                                ,   description <- Just newDes
-                                }
+            in  noFx { model | info <- { info | amount <- newAmt
+                                              , description <- Just newDes
+                                       }
                      }
 
 
@@ -212,7 +204,7 @@ jsonPost decoder url body =
 encodeRequest : ChargeRequest -> Body
 encodeRequest req =
     Encode.object
-        [ ("stripeToken",  Encode.string req.stripeToken)
+        [ ("stripeToken",  Encode.string req.tokenId)
         , ("amount", Encode.int req.amount)
         , ("name", Encode.string req.name)
         , ("email", Encode.string req.email)
@@ -237,37 +229,32 @@ view address model =
                 , selector address
                 , checkoutButton address model.info.amount model.user
                 ]
+
             Waiting ->
                 [ div [messageStyle] [text "Please Wait..."] ]
+
             Failed error ->
                 [ div [messageStyle] [text error] ] -- TODO: maybe do nothing here
 
             Succeeded chargeSuccess ->
                 [ confirmationBox chargeSuccess ]
-    in
-        div [ containerStyle ]
+
+    in  div [ containerStyle ]
             [ setViewport
             , header [ topStyle ] [ h1 [] [text "Pay For Lessons With Nick"] ]
             , div [ contentStyle ] content
             , footer [ bottomStyle ] [text "© Nick Lawler 2015" ] -- TODO: get current year
             ]
 
-
-userInput : Signal.Address Action -> UserInfo -> Html
-userInput address (name,email) =
+-- lesson learned: pass in the whole model to ease refactoring
+userInput : Signal.Address Action -> Name -> Html
+userInput address name =
     div [userInputStyle]
         [ h2 [] [text "Who are You?"]
         , input
             [ placeholder "Name"
             , value name
             , on "input" targetValue (Signal.message address << NewName)
-            , inputStyle
-            ]
-            []
-        , input
-            [ placeholder "Email"
-            , value email
-            , on "input" targetValue (Signal.message address << NewEmail)
             , inputStyle
             ]
             []
@@ -291,13 +278,13 @@ buttonRow address =
             ]
 
 -- TODO: Replace ad-hoc user check with actual validation
-checkoutButton : Signal.Address Action -> Int -> UserInfo -> Html
-checkoutButton address amount (name,email) =
+checkoutButton : Signal.Address Action -> Int -> Name -> Html
+checkoutButton address amount name =
     div [checkoutButtonStyle]
         [ h2 [] [text ( formatAmount amount )]
         , button
             [ onClick address Open
-            , disabled (amount <= 0 || name == "" || email == "")
+            , disabled (amount <= 0 || name == "")
             ]
             [text "Pay with Card"]
         ]
@@ -321,7 +308,7 @@ app =
         { init = init "pk_test_Y31x7Mqyi1iY63IQb95IAORm" "auto"
         , update = update
         , view = view
-        , inputs = [incomingToken']
+        , inputs = [TokenDispatch <~ incomingToken]
         }
 
 
@@ -352,16 +339,7 @@ port closeStripe : Signal ()
 port closeStripe = closeMailbox.signal
 
 
-incomingToken' : Signal Action
-incomingToken' =
-    let tokenState tok =
-            if | tok == "" -> TokenDispatch Nothing
-               | otherwise -> TokenDispatch (Just tok)
-    in
-        Signal.map tokenState incomingToken
-
-
-port incomingToken : Signal Token
+port incomingToken : Signal (Maybe Token)
 
 
 port tasks : Signal (Task.Task Effects.Never ())
