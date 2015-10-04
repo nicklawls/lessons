@@ -10,7 +10,7 @@ module Style ( topStyle
              , inputStyle
              , buttonStyle
              , decreaseMargin
-             , errorStyle
+             , messageStyle
              ) where
 
 import Html
@@ -99,8 +99,8 @@ containerStyle =
         <| Text.color (rgba 215 216 219 1 )
         <| Dimension.height 900 []
 
-errorStyle : Html.Attribute
-errorStyle =
+messageStyle : Html.Attribute
+messageStyle =
     style
         <| column
         <| centered []

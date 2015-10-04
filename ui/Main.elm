@@ -25,7 +25,7 @@ type alias Model =
     , locale : Locale
     , user : UserInfo
     , info : FormInfo
-    , state : FormState 
+    , state : FormState
     }
 
 
@@ -90,7 +90,7 @@ defaultInfo =
     , zipCode = True
     , billingAddress = False
     , shippingAddress = False
-    , email = Nothing
+    , email = Just "Nothing"
     , allowRememberMe = True
     , bitcoin = False
     , alipay = Nothing
@@ -191,7 +191,7 @@ update address model =
 
 postCharge : ChargeRequest -> Effects Action
 postCharge chargeRequest =
-    jsonPost decodeResponse "https://lessonsapi.herokuapp.com/charge" (encodeRequest chargeRequest)
+    jsonPost decodeResponse "http://localhost:8082/charge" (encodeRequest chargeRequest)
         |> Task.toMaybe
         |> Task.map Confirm
         |> Effects.task
@@ -238,9 +238,9 @@ view address model =
                 , checkoutButton address model.info.amount model.user
                 ]
             Waiting ->
-                [ div [errorStyle] [text "Please Wait..."] ]
+                [ div [messageStyle] [text "Please Wait..."] ]
             Failed error ->
-                [ div [errorStyle] [text error] ] -- TODO: maybe do nothing here
+                [ div [messageStyle] [text error] ] -- TODO: maybe do nothing here
 
             Succeeded chargeSuccess ->
                 [ confirmationBox chargeSuccess ]
