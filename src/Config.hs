@@ -1,9 +1,9 @@
 module Config where
 
-import Web.Stripe
-import Data.Text as T
-import System.Environment
-import Data.ByteString.Char8 as B
+import           Data.ByteString.Char8 as B
+import           Data.Text             as T
+import           System.Environment
+import           Web.Stripe
 
 
 type TrelloKey = T.Text
@@ -13,11 +13,11 @@ type TrelloList = T.Text
 
 data Config = Config
     { stripeConfig :: StripeConfig
-    , trelloKey :: TrelloKey
-    , trelloToken :: TrelloToken
-    , listId :: TrelloList
-    , port :: Int
-    , environment :: String
+    , trelloKey    :: TrelloKey
+    , trelloToken  :: TrelloToken
+    , listId       :: TrelloList
+    , port         :: Int
+    , environment  :: String
     }
 
 

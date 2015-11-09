@@ -273,8 +273,8 @@ buttonRow : Signal.Address Action -> Html
 buttonRow address =
         div [ buttonRowStyle ]
             [ button [onClick address (Choose 2500 "1 Hour-Long Lesson"), buttonStyle] [text "1"]
-            , button [onClick address (Choose 4500 "2 Hours of Lessons"), buttonStyle] [text "2"]
-            , button [onClick address (Choose 7000 "3 Hours of Lessons"), buttonStyle] [text "3"]
+            , button [onClick address (Choose 4600 "2 Hours of Lessons"), buttonStyle] [text "2"]
+            , button [onClick address (Choose 6300 "3 Hours of Lessons"), buttonStyle] [text "3"]
             ]
 
 -- TODO: Replace ad-hoc user check with actual validation
