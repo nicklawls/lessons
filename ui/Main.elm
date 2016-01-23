@@ -11,7 +11,7 @@ import Task exposing (Task, andThen, succeed)
 import Http exposing (Body, Error, defaultSettings, fromJson)
 import Style exposing (..)
 import Css exposing (setViewport)
-import Signal exposing ((<~))
+import Signal as Signal exposing (map)
 
 {-| Refactoring plan
 
@@ -150,18 +150,18 @@ update address model =
             )
 
         TokenDispatch (Just token) ->
-            ( { model | state <- Waiting }
+            ( { model | state = Waiting }
                , postCharge (ChargeRequest token.tokenId model.info.amount model.user token.email)
             )
 
         TokenDispatch Nothing -> -- Stripe has an error for bad connectivity while modal is open, so will only hit if connection goes down between hitting Pay and js sending the token back
-            noFx { model | state <- Failed "Looks like Stripe is having some issues, try again later" }
+            noFx { model | state = Failed "Looks like Stripe is having some issues, try again later" }
 
         Confirm (Just result) ->
-            noFx { model | state <- Succeeded result }
+            noFx { model | state = Succeeded result }
 
         Confirm Nothing ->
-            noFx { model | state <- Failed "There's been an error talking to the server, tell Nick ASAP!" } -- TODO: maybe add action and effect to return to ready state after timeout
+            noFx { model | state = Failed "There's been an error talking to the server, tell Nick ASAP!" } -- TODO: maybe add action and effect to return to ready state after timeout
 
         Close -> -- no need to actually call, stripe's iframe already listening for esc and clicks
             ( model
@@ -171,12 +171,12 @@ update address model =
             )
 
         NewName name ->
-            noFx { model | user <- name }
+            noFx { model | user = name }
 
         Choose newAmt newDes ->
             let info = model.info
-            in  noFx { model | info <- { info | amount <- newAmt
-                                              , description <- Just newDes
+            in  noFx { model | info = { info | amount = newAmt
+                                              , description = Just newDes
                                        }
                      }
 
@@ -308,7 +308,7 @@ app =
         { init = init "pk_test_Y31x7Mqyi1iY63IQb95IAORm" "auto"
         , update = update
         , view = view
-        , inputs = [TokenDispatch <~ incomingToken]
+        , inputs = [Signal.map TokenDispatch incomingToken]
         }
 
 
